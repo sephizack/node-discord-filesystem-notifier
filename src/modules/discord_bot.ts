@@ -48,8 +48,8 @@ module DiscordBot {
         }
         
         public sendNotif(basedir, subdir, filename) {
-            if (basedir.indexOf('/watched') !== -1 || subdir.indexOf('/watched') !== -1) {
-                Logger.ok("Notification skipped as path contains /watched")
+            if (basedir.indexOf('/_') !== -1 || subdir.indexOf('/_') !== -1 || subdir.indexOf('_') == 0) {
+                Logger.ok("Notification skipped as path contains a folder starting by _")
             }
             else if (!this.isConnected) {
                 Logger.warning(this.prefix(), "Notification skipped as Bot is not connected")
