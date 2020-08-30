@@ -1,0 +1,14 @@
+{
+	"DiscordsBots": [
+		{
+			"type": "YOUR_TYPE",
+			"token" : "YOUR_TOKEN",
+			"notify": [
+				{"channel": "YOUR_CHANNEL_ID"},
+				{"username": "YOUR_USER_ID"}
+			],
+			"customData": {}
+		}
+	],
+	"DirectoriesToWatch": []
+}
