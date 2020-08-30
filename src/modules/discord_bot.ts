@@ -101,7 +101,11 @@ module DiscordBot {
         public buildNotifContent(basedir, subdir, filename) {
             let notifData = ""
             if (basedir !== '/') {
-                notifData = `Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`
+                if (subdir == "Films" || subdir == "OAVs") {
+                    notifData = `Un nouvel OAV est dispo sur le NAS !`
+                } else {
+                    notifData = `Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`
+                }
             } else {
                 notifData = `Un nouvel épisode est dispo sur le NAS !\n${filename}`
             }
