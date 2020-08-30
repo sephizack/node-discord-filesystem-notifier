@@ -48,7 +48,11 @@ module DiscordBot {
         }
         
         public sendNotif(basedir, subdir, filename) {
-            if (basedir.indexOf('/_') !== -1 || subdir.indexOf('/_') !== -1 || subdir.indexOf('_') == 0) {
+            let fileExtension = filename.split('.').pop().toLowerCase()
+            if (['mp4', 'mkv', 'avi'].indexOf(fileExtension) == -1) {
+                Logger.debug(`Notification skipped as file extension '${fileExtension}' is not elligible`)
+            }
+            else if (basedir.indexOf('/_') !== -1 || subdir.indexOf('/_') !== -1 || subdir.indexOf('_') == 0) {
                 Logger.ok("Notification skipped as path contains a folder starting by _")
             }
             else if (!this.isConnected) {
@@ -101,8 +105,8 @@ module DiscordBot {
         public buildNotifContent(basedir, subdir, filename) {
             let notifData = ""
             if (basedir !== '/') {
-                if (subdir == "Films" || subdir == "OAVs") {
-                    notifData = `Un nouvel OAV est dispo sur le NAS !`
+                if (subdir.indexOf("Films") == 0 || subdir.indexOf("OAVs") == 0) {
+                    notifData = `Un **nouvel OAV** est dispo sur le NAS !`
                 } else {
                     notifData = `Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`
                 }
