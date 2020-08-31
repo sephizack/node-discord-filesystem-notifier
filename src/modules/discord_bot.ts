@@ -1,5 +1,6 @@
 import Discord, { Base } from 'discord.js'
 import Logger from './logger.js'
+import config from 'config';
 
 module DiscordBot {
 
@@ -62,6 +63,10 @@ module DiscordBot {
                 let aNotification = this.buildNotifContent(basedir, subdir, filename)
                 Logger.debug(this.prefix(), "Notification content:", aNotification);
                 Logger.info(this.prefix(), "Sending notif message to discord...");
+                if (config.has("skipAcutalNotif") && config.get("skipAcutalNotif")) {
+                    Logger.debug(this.prefix(), "Notification skipped as per config");
+                    return
+                }
                 for (let aChannel of this.channelsToNotify) {
                     aChannel.send(aNotification)
                 }
@@ -104,16 +109,23 @@ module DiscordBot {
 
         public buildNotifContent(basedir, subdir, filename) {
             let notifData = ""
+
             if (basedir !== '/') {
                 if (subdir.indexOf("Films") == 0 || subdir.indexOf("OAVs") == 0) {
-                    notifData = `Un **nouvel OAV** est dispo sur le NAS !`
+                    notifData = `> Un **nouvel OAV** est dispo sur le NAS !`
                 } else {
-                    notifData = `Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`
+                    notifData = `> Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`
                 }
             } else {
-                notifData = `Un nouvel épisode est dispo sur le NAS !\n${filename}`
+                notifData = `> Un nouvel épisode est dispo sur le NAS !\n${filename}`
             }
-            notifData += `\n*${filename}*`
+            notifData += `\n> *${filename}*`
+            if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
+                let baseUrl = config.get("publicFilesUrl");
+                notifData += `\n> > Dossier: ${baseUrl}/${encodeURIComponent(subdir)}`
+                notifData += `\n> > Lien vers l'épisode: ${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
+                notifData += `\n> *Retrouvez le mot de passe en message epinglé sur le discord*`
+            }
             return notifData
         }
     }

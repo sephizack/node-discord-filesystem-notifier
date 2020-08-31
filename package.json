@@ -1,7 +1,7 @@
 {
   "name": "node-discord-filesystem-notifier",
   "version": "1.0.0",
-  "description": "bot qui aide les gens",
+  "description": "Watch file updates and notify",
   "main": "dist/app.js",
   "directories": {
     "test": "test"
@@ -33,5 +33,5 @@
     "test": "tsc --build --clean && tsc && jest -t"
   },
   "author": "Tony Bisegna",
-  "license": "ISC"
+  "license": "MIT"
 }
