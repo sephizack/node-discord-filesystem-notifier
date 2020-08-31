@@ -10,5 +10,6 @@
 			"customData": {}
 		}
 	],
-	"DirectoriesToWatch": []
+	"DirectoriesToWatch": [],
+	"skipAcutalNotif": false
 }

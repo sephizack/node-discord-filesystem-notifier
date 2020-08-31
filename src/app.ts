@@ -38,8 +38,8 @@ setTimeout(() => {
         ignored: /(^|[\/\\])\../, // ignore dotfiles
         persistent: true,
         ignoreInitial: true,
-        //usePolling: false,
-        //interval: 100,
+        usePolling: false,
+        interval: 60,
     });
     fileWatcher.on('add', (path) => {
         let pathSplit = path.split('/');
