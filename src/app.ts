@@ -35,7 +35,7 @@ for (let discordSetup of config.get("DiscordsBots")) {
 // Initialize File watcher
 setTimeout(() => {
     const fileWatcher = chokidar.watch(config.get("DirectoriesToWatch"), {
-        ignored: /(^|[\/\\])\../, // ignore dotfiles
+        ignored: /(^|[\/\\])(\.|@)./, // ignore dotfiles and @files
         persistent: true,
         ignoreInitial: true,
         usePolling: true,
