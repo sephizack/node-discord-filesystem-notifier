@@ -49,8 +49,8 @@ setTimeout(() => {
         persistent: true,
         ignoreInitial: false,
         usePolling: true,
-        interval: 1000*5,
-        binaryInterval: 1000*5
+        interval: 1000*config.get('pollingInterval'),
+        binaryInterval: 1000*config.get('pollingInterval')
     });
     fileWatcher.on('add', async (path, stats) => {
         let pathSplit = path.split('/');
