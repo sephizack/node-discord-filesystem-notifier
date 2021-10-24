@@ -12,5 +12,6 @@
 	],
 	"DirectoriesToWatch": [],
 	"skipAcutalNotif": false,
-	"publicFilesUrl": ""
+	"publicFilesUrl": "",
+    "ignoreNotifsAtStartDuringSec": 10
 }
