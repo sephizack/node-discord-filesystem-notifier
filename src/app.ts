@@ -34,12 +34,7 @@ for (let discordSetup of config.get("DiscordsBots")) {
     allDiscordsBots.push(aDiscordBot)
 }
 
-let isIgnoringNotif = true;
-setTimeout(() => {
-    isIgnoringNotif = false;
-    Logger.info("Ignore notifs mode disabled!")
-}, config.get('ignoreNotifsAtStartDuringSec')*1000);
-
+let startDateMs = new Date().getTime()
 
 let alreadySeenHashes = {}
 // Initialize File watcher
@@ -60,17 +55,16 @@ setTimeout(() => {
         let fileHash = await hasha.fromFile(path, {algorithm: 'sha1'})
         if (alreadySeenHashes[fileHash])
         {
-            Logger.debug(`Skipping file ${fileName} as hash has already been notified`)
+            return Logger.ok(`Skipping file ${fileName} as hash has already been notified`)
         }
         else
         {
             alreadySeenHashes[fileHash] = 1;
             Logger.info(`Flagging file hash of '${fileName}' as already been notified`)
         }
-        if (isIgnoringNotif)
+        if (startDateMs > stats.ctimeMs)
         {
-            Logger.debug(`Notif skipped as process is still in ignore mode`)
-            return;
+            return Logger.debug(`Notif skipped as file was present before start-up`);
         }
         for (let aWatchedDir of config.get("DirectoriesToWatch")) {
             if (subDir.indexOf(aWatchedDir) !== -1) {
