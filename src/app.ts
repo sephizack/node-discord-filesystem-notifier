@@ -2,7 +2,9 @@ import Logger from './modules/logger.js'
 import DiscordBot from './modules/discord_bot.js'
 import chokidar from 'chokidar'
 import config from 'config';
-import hasha from 'hasha';
+import sha1 from 'sha1';
+import fs from 'fs/promises';
+import { Buffer } from 'buffer';
 
 //const client = new Discord.Client();
 //client.login('token');
@@ -34,8 +36,19 @@ for (let discordSetup of config.get("DiscordsBots")) {
     allDiscordsBots.push(aDiscordBot)
 }
 
-let startDateMs = new Date().getTime()
+const hashingBuffer = Buffer.allocUnsafe(1024*4);
+async function hashFile(path, stats){
+    let fileHandler = await fs.open(path, 'r')
+    let fileSize:number = stats.size
+    let fileDataSample = fileHandler.read(hashingBuffer, 0, Math.min(1024*4, fileSize/2), fileSize/2)
+    let beforeHash = new Date().getTime()
+    let fileHash = ""+fileSize+sha1(fileDataSample)
+    Logger.debug(`File hashed in ${new Date().getTime() - beforeHash} ms`)
+    return fileHash
+}
 
+
+let startDateMs = new Date().getTime()
 let alreadySeenHashes = {}
 // Initialize File watcher
 setTimeout(() => {
@@ -52,9 +65,7 @@ setTimeout(() => {
         let fileName = pathSplit.pop()
         let baseDir = "/"
         let subDir = pathSplit.join('/')
-        let beforeHash = new Date().getTime()
-        let fileHash = await hasha.fromFile(path, {algorithm: 'sha1'})
-        Logger.debug(`File hashed in ${new Date().getTime() - beforeHash} ms`)
+        let fileHash = await hashFile(path, stats)
         if (alreadySeenHashes[fileHash])
         {
             return Logger.ok(`Skipping file ${fileName} as hash has already been notified (${fileHash})`)
