@@ -38,10 +38,11 @@ for (let discordSetup of config.get("DiscordsBots")) {
 
 const hashingBuffer = Buffer.allocUnsafe(1024*4);
 async function hashFile(path, stats){
+    let beforeHash = new Date().getTime()
     let fileHandler = await fs.open(path, 'r')
     let fileSize:number = stats.size
     let fileDataSample = fileHandler.read(hashingBuffer, 0, Math.min(1024*4, fileSize/2), fileSize/2)
-    let beforeHash = new Date().getTime()
+    fileHandler.close()
     let fileHash = ""+fileSize+sha1(fileDataSample)
     Logger.debug(`File hashed in ${new Date().getTime() - beforeHash} ms`)
     return fileHash
