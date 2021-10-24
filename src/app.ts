@@ -52,7 +52,9 @@ setTimeout(() => {
         let fileName = pathSplit.pop()
         let baseDir = "/"
         let subDir = pathSplit.join('/')
+        let beforeHash = new Date().getTime()
         let fileHash = await hasha.fromFile(path, {algorithm: 'sha1'})
+        Logger.debug(`File hashed in ${new Date().getTime() - beforeHash} ms`)
         if (alreadySeenHashes[fileHash])
         {
             return Logger.ok(`Skipping file ${fileName} as hash has already been notified (${fileHash})`)
