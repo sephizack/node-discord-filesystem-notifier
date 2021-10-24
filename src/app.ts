@@ -55,12 +55,12 @@ setTimeout(() => {
         let fileHash = await hasha.fromFile(path, {algorithm: 'sha1'})
         if (alreadySeenHashes[fileHash])
         {
-            return Logger.ok(`Skipping file ${fileName} as hash has already been notified`)
+            return Logger.ok(`Skipping file ${fileName} as hash has already been notified (${fileHash})`)
         }
         else
         {
             alreadySeenHashes[fileHash] = 1;
-            Logger.info(`Flagging file hash of '${fileName}' as already been notified`)
+            Logger.info(`Flagging file hash of '${fileName}' as already been notified (${fileHash})`)
         }
         if (startDateMs > stats.ctimeMs)
         {
