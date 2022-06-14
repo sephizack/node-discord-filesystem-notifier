@@ -38,7 +38,7 @@ module DiscordBot {
                     this.channelIDsToNotify.push(aNotifyAction['channel'])
                 }
             }
-            this.starIPPolling()
+            this.checkIPAdresses()
             this.setupClient()
             this.client.login(token).catch((error) => {
                 Logger.error(this.prefix(), "Unable to conect to Discord", error)
@@ -73,57 +73,66 @@ module DiscordBot {
             });
         }
 
-        public starIPPolling() {
-            let botInstance = this
-            setInterval(async () => {
-                try {
-                    let aAtLeastOneUpdated = false;
-                    let ipResult = await axios.get('https://api.ipify.org', { httpsAgent:myHttpsAgent, timeout:3000 })
-                    if (ipResult.status == 200 && ipResult.data != botInstance.currentIP) {
-                        botInstance.currentIP = ipResult.data;
-                        Logger.ok('Current IP updated:', botInstance.currentIP)
+        public async checkIPAdresses() {
+            try {
+                // Logger.debug('Checking IP adresses...')
+                let aAtLeastOneUpdated = false;
+                let ipResult = await axios.get('https://api.ipify.org', { httpsAgent:myHttpsAgent, timeout:0 })
+                // Logger.debug("IP reply", ipResult.data)
+                if (ipResult.status == 200)
+                {
+                    if (ipResult.data != this.currentIP) {
+                        this.currentIP = ipResult.data;
+                        Logger.ok('Current IP updated:', this.currentIP)
                         aAtLeastOneUpdated = true
                     }
-                    if (botInstance.domainName) {
-                        dns.resolve4(botInstance.domainName, (err, addresses) => {
-                            if (err) {
-                                Logger.warning('Unable to find ip for domain', botInstance.domainName, err);
-                                if (botInstance.domainIP) {
-                                    aAtLeastOneUpdated = true
-                                    botInstance.domainIP = null
-                                }
-                            } else {
-                                if (botInstance.domainIP != addresses[0]) {
-                                    botInstance.domainIP = addresses[0]
-                                    Logger.ok('Current domain IP updated:', botInstance.domainIP)
-                                    aAtLeastOneUpdated = true
-                                }
-                            }
-                            if (aAtLeastOneUpdated) {
-                                // Notif different IP
-                                if (botInstance.domainIP != botInstance.currentIP) {
-                                    botInstance.differentIPTimeout = setTimeout(() => {
-                                        let message = new Discord.MessageEmbed().setTitle('Difference d\'IP detectée !').setDescription(
-                                            '**L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !**\n' + this.buildIpMessage());
-                                        for (let aChannel of this.channelsToNotify) {
-                                            aChannel.send(message)
-                                        }
-                                        Logger.ok("Notify for different IP sent!")
-                                    }, 1000*60*2);
-                                    Logger.info("Timer started to notify different IP...")
-                                } else {
-                                    if (botInstance.differentIPTimeout) {
-                                        clearTimeout(botInstance.differentIPTimeout)
-                                        botInstance.differentIPTimeout = null
-                                    }
-                                }
-                            }
-                        });
-                    }
-                } catch(e) {
-                    Logger.warning('Unable to find current IP', e)
                 }
-            }, 5000)
+                else
+                {
+                    Logger.warning('Unable to get current public IP. Got HTTP code:', ipResult.status)
+                }
+                if (this.domainName) {
+                    dns.resolve4(this.domainName, (err, addresses) => {
+                        if (err) {
+                            Logger.warning('Unable to find ip for domain', this.domainName, err);
+                            if (this.domainIP) {
+                                aAtLeastOneUpdated = true
+                                this.domainIP = null
+                            }
+                        } else {
+                            if (this.domainIP != addresses[0]) {
+                                this.domainIP = addresses[0]
+                                Logger.ok('Current domain IP updated:', this.domainIP)
+                                aAtLeastOneUpdated = true
+                            }
+                        }
+                        if (aAtLeastOneUpdated) {
+                            // Notif different IP
+                            if (this.domainIP != this.currentIP) {
+                                this.differentIPTimeout = setTimeout(() => {
+                                    let message = new Discord.MessageEmbed().setTitle('Difference d\'IP detectée !').setDescription(
+                                        '**L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !**\n' + this.buildIpMessage());
+                                    for (let aChannel of this.channelsToNotify) {
+                                        aChannel.send(message)
+                                    }
+                                    Logger.ok("Notify for different IP sent!")
+                                }, 1000*60*2);
+                                Logger.info("Timer started to notify different IP...")
+                            } else {
+                                if (this.differentIPTimeout) {
+                                    clearTimeout(this.differentIPTimeout)
+                                    this.differentIPTimeout = null
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch(e) {
+                Logger.warning('Unable to find current IP', e)
+            }
+            setTimeout(() => {
+                this.checkIPAdresses()
+            }, 20000)
         }
 
         public buildNotifContent(basedir, subdir, filename) {
