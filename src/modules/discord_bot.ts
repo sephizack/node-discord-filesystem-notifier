@@ -148,7 +148,7 @@ module DiscordBot {
             }, 20000)
         }
 
-        public buildNotifContent(basedir, subdir, filename) {
+        public buildNotifContent(basedir, subdir, filename):any {
             return `File '${filename}' added to folder '${subdir}' in '${basedir}'`
         }
         
@@ -215,26 +215,34 @@ module DiscordBot {
             super(token, notifyConfig, customData)
         }
 
-        public buildNotifContent(basedir, subdir, filename) {
-            let notifData = ""
+        public buildNotifContent(basedir, subdir, filename):any {
+            let notif = new Discord.MessageEmbed();
+            notif.setColor('#0099ff')
 
             if (basedir !== '/') {
                 if (subdir.indexOf("Films") == 0 || subdir.indexOf("OAVs") == 0) {
-                    notifData = `> Un **nouvel OAV** est dispo sur le NAS !`
+                    notif.setDescription(`Un **nouvel OAV** est dispo sur le NAS !`)
+                    notif.setTitle("Nouvel OVA")
                 } else {
-                    notifData = `> Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`
+                    notif.setDescription(`Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`)
+                    notif.setTitle(`${subdir.replace(/\//g, ' ')}`)
                 }
             } else {
-                notifData = `> Un nouvel épisode est dispo sur le NAS !\n${filename}`
+                notif.setDescription(`Un nouvel épisode est dispo sur le NAS !`)
+                notif.setTitle( "Nouvel épisode")
             }
-            notifData += `\n> *${filename}*`
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
-                notifData += `\n> > Dossier: ${baseUrl}/${encodeURIComponent(subdir)}`
-                notifData += `\n> > Lien vers l'épisode: ${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
-                notifData += `\n> *Retrouvez le mot de passe en message epinglé sur le discord*`
+                notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
+                if (config.has("thumbsUrl")) {
+                    notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir)}.png`)
+                }
+                notif.addField("Lien vers l'épisode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
+                notif.addField("Dossier", `${baseUrl}/${encodeURIComponent(subdir)}`)
+                notif.setFooter('Retrouvez le mot de passe en message epinglé sur le discord')
             }
-            return notifData
+            notif.addField("Nom du fichier", filename)
+            return notif;
         }
     }
 }

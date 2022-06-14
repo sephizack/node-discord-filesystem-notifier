@@ -14,5 +14,6 @@
 	"skipAcutalNotif": false,
 	"publicFilesUrl": "",
     "publicFilesHostname": "",
+    "thumbsUrl": "",
     "pollingInterval": 5
 }
