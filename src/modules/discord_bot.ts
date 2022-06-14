@@ -1,6 +1,13 @@
 import Discord, { Base } from 'discord.js'
 import Logger from './logger.js'
 import config from 'config';
+import https from 'https'
+import dns from 'dns'
+import axios from 'axios'
+
+let httpsAgent = new https.Agent({
+    rejectUnauthorized: false
+})
 
 module DiscordBot {
 
@@ -20,6 +27,10 @@ module DiscordBot {
     export class BaseDiscordBot {
         public constructor(token: string, notifyConfig:any, customData:any) {
             this.client = new Discord.Client();
+            this.differentIPTimeout = null
+            this.currentIP = undefined
+            this.domainName = config.has("publicFilesHostname") ? config.get("publicFilesHostname") : ""
+            this.domainIP = undefined
             this.botUsername = "(not logged)"
             this.channelIDsToNotify = []
             for (let aNotifyAction of notifyConfig) {
@@ -27,11 +38,24 @@ module DiscordBot {
                     this.channelIDsToNotify.push(aNotifyAction['channel'])
                 }
             }
+            this.starIPPolling()
             this.setupClient()
             this.client.login(token).catch((error) => {
                 Logger.error(this.prefix(), "Unable to conect to Discord", error)
                 this.isConnected = false
             });
+        }
+
+        private buildIpMessage() {
+            let message = "IP actuelle non détectée"
+            if (this.currentIP) {
+                let url = config.get("publicFilesUrl");
+                url = url.replace(this.domainName, this.currentIP)
+                message = `IP du NAS: **${this.currentIP}**\n`
+                        + `IP du domaine *${this.domainName}*: ${this.domainIP}\n`
+                        + `Addresse du serveur avec IP actuelle: ${url}`
+            }
+            return message
         }
 
         private setupClient() {
@@ -42,6 +66,64 @@ module DiscordBot {
                 //Logger.debug(this.prefix(), this.client);
                 this.getChannels()
             });
+            this.client.on('message', message => {
+                if (message.content === "!ip") {
+                    message.reply(new Discord.MessageEmbed().setTitle('IP Actuelle').setDescription(this.buildIpMessage()))
+                }
+            });
+        }
+
+        public starIPPolling() {
+            let botInstance = this
+            setInterval(async () => {
+                try {
+                    let aAtLeastOneUpdated = false;
+                    let ipResult = await axios.get('https://ip4.seeip.org/json', { httpsAgent })
+                    if (ipResult.data['ip'] != botInstance.currentIP) {
+                        botInstance.currentIP = ipResult.data['ip'];
+                        Logger.ok('Current IP updated:', botInstance.currentIP)
+                        aAtLeastOneUpdated = true
+                    }
+                    if (botInstance.domainName) {
+                        dns.resolve4(botInstance.domainName, (err, addresses) => {
+                            if (err) {
+                                Logger.warning('Unable to find ip for domain', botInstance.domainName, err);
+                                if (botInstance.domainIP) {
+                                    aAtLeastOneUpdated = true
+                                    botInstance.domainIP = null
+                                }
+                            } else {
+                                if (botInstance.domainIP != addresses[0]) {
+                                    botInstance.domainIP = addresses[0]
+                                    Logger.ok('Current domain IP updated:', botInstance.domainIP)
+                                    aAtLeastOneUpdated = true
+                                }
+                            }
+                            if (aAtLeastOneUpdated) {
+                                // Notif different IP
+                                if (botInstance.domainIP != botInstance.currentIP) {
+                                    botInstance.differentIPTimeout = setTimeout(() => {
+                                        let message = new Discord.MessageEmbed().setTitle('Difference d\'IP detectée !').setDescription(
+                                            '**L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !**\n' + this.buildIpMessage());
+                                        for (let aChannel of this.channelsToNotify) {
+                                            aChannel.send(message)
+                                        }
+                                        Logger.ok("Notify for different IP sent!")
+                                    }, 1000*60*2);
+                                    Logger.info("Timer started to notify different IP...")
+                                } else {
+                                    if (botInstance.differentIPTimeout) {
+                                        clearTimeout(botInstance.differentIPTimeout)
+                                        botInstance.differentIPTimeout = null
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch(e) {
+                    Logger.warning('Unable to find current IP', e)
+                }
+            }, 5000)
         }
 
         public buildNotifContent(basedir, subdir, filename) {
@@ -97,8 +179,12 @@ module DiscordBot {
 
         isConnected: boolean;
         botUsername:string
+        currentIP:string
+        domainName:string
+        domainIP:string
         client:any;
         channelsToNotify:any;
+        differentIPTimeout:any;
         channelIDsToNotify:string[];
     }
 
