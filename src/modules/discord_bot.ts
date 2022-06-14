@@ -5,15 +5,6 @@ import https from 'https'
 import dns from 'dns'
 import axios from 'axios'
 
-const getIPCall = {
-  hostname: 'api.ipify.org',
-  port: 443,
-  path: '/',
-  method: 'GET',
-};
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-https.globalAgent.options.rejectUnauthorized = false;
 let myHttpsAgent = new https.Agent({
     rejectUnauthorized: false
 })
@@ -87,66 +78,48 @@ module DiscordBot {
             setInterval(async () => {
                 try {
                     let aAtLeastOneUpdated = false;
-
-                    const req = https.request(getIPCall, res => {
-                        console.log(`statusCode: ${res.statusCode}`);
-                        res.on('data', d => {
-                            if (res.statusCode == 200) {
-                                botInstance.currentIP = d.toString();
-                                Logger.ok('v2 Current IP updated:', botInstance.currentIP)
-                                aAtLeastOneUpdated = true;
-                                if (botInstance.domainName) {
-                                    dns.resolve4(botInstance.domainName, (err, addresses) => {
-                                        if (err) {
-                                            Logger.warning('Unable to find ip for domain', botInstance.domainName, err);
-                                            if (botInstance.domainIP) {
-                                                aAtLeastOneUpdated = true
-                                                botInstance.domainIP = null
-                                            }
-                                        } else {
-                                            if (botInstance.domainIP != addresses[0]) {
-                                                botInstance.domainIP = addresses[0]
-                                                Logger.ok('Current domain IP updated:', botInstance.domainIP)
-                                                aAtLeastOneUpdated = true
-                                            }
+                    let ipResult = await axios.get('https://api.ipify.org', { httpsAgent:myHttpsAgent, timeout:3000 })
+                    if (ipResult.status == 200 && ipResult.data != botInstance.currentIP) {
+                        botInstance.currentIP = ipResult.data;
+                        Logger.ok('Current IP updated:', botInstance.currentIP)
+                        aAtLeastOneUpdated = true
+                    }
+                    if (botInstance.domainName) {
+                        dns.resolve4(botInstance.domainName, (err, addresses) => {
+                            if (err) {
+                                Logger.warning('Unable to find ip for domain', botInstance.domainName, err);
+                                if (botInstance.domainIP) {
+                                    aAtLeastOneUpdated = true
+                                    botInstance.domainIP = null
+                                }
+                            } else {
+                                if (botInstance.domainIP != addresses[0]) {
+                                    botInstance.domainIP = addresses[0]
+                                    Logger.ok('Current domain IP updated:', botInstance.domainIP)
+                                    aAtLeastOneUpdated = true
+                                }
+                            }
+                            if (aAtLeastOneUpdated) {
+                                // Notif different IP
+                                if (botInstance.domainIP != botInstance.currentIP) {
+                                    botInstance.differentIPTimeout = setTimeout(() => {
+                                        let message = new Discord.MessageEmbed().setTitle('Difference d\'IP detectée !').setDescription(
+                                            '**L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !**\n' + this.buildIpMessage());
+                                        for (let aChannel of this.channelsToNotify) {
+                                            aChannel.send(message)
                                         }
-                                        if (aAtLeastOneUpdated) {
-                                            // Notif different IP
-                                            if (botInstance.domainIP != botInstance.currentIP) {
-                                                botInstance.differentIPTimeout = setTimeout(() => {
-                                                    let message = new Discord.MessageEmbed().setTitle('Difference d\'IP detectée !').setDescription(
-                                                        '**L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !**\n' + this.buildIpMessage());
-                                                    for (let aChannel of this.channelsToNotify) {
-                                                        aChannel.send(message)
-                                                    }
-                                                    Logger.ok("Notify for different IP sent!")
-                                                }, 1000*60*2);
-                                                Logger.info("Timer started to notify different IP...")
-                                            } else {
-                                                if (botInstance.differentIPTimeout) {
-                                                    clearTimeout(botInstance.differentIPTimeout)
-                                                    botInstance.differentIPTimeout = null
-                                                }
-                                            }
-                                        }
-                                    });
+                                        Logger.ok("Notify for different IP sent!")
+                                    }, 1000*60*2);
+                                    Logger.info("Timer started to notify different IP...")
+                                } else {
+                                    if (botInstance.differentIPTimeout) {
+                                        clearTimeout(botInstance.differentIPTimeout)
+                                        botInstance.differentIPTimeout = null
+                                    }
                                 }
                             }
                         });
-                    });
-                    req.on('error', error => {
-                        Logger.error(error);
-                    });
-                    req.end();
-
-                      
-                    // let ipResult = await axios.get('https://api.ipify.org', { httpsAgent:myHttpsAgent, timeout:3000 })
-                    // if (ipResult.status == 200 && ipResult.data != botInstance.currentIP) {
-                    //     botInstance.currentIP = ipResult.data;
-                    //     Logger.ok('Current IP updated:', botInstance.currentIP)
-                    //     aAtLeastOneUpdated = true
-                    // }
-                    
+                    }
                 } catch(e) {
                     Logger.warning('Unable to find current IP', e)
                 }
