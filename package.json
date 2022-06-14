@@ -1,6 +1,6 @@
 {
   "name": "node-discord-filesystem-notifier",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Watch file updates and notify",
   "main": "dist/app.js",
   "directories": {
