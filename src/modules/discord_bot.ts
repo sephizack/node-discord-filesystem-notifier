@@ -5,7 +5,9 @@ import https from 'https'
 import dns from 'dns'
 import axios from 'axios'
 
-let httpsAgent = new https.Agent({
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+https.globalAgent.options.rejectUnauthorized = false;
+let myHttpsAgent = new https.Agent({
     rejectUnauthorized: false
 })
 
@@ -78,9 +80,9 @@ module DiscordBot {
             setInterval(async () => {
                 try {
                     let aAtLeastOneUpdated = false;
-                    let ipResult = await axios.get('https://ip4.seeip.org/json', { httpsAgent })
-                    if (ipResult.data['ip'] != botInstance.currentIP) {
-                        botInstance.currentIP = ipResult.data['ip'];
+                    let ipResult = await axios.get('https://api.ipify.org', { httpsAgent:myHttpsAgent, timeout:3000 })
+                    if (ipResult.data != botInstance.currentIP) {
+                        botInstance.currentIP = ipResult.data;
                         Logger.ok('Current IP updated:', botInstance.currentIP)
                         aAtLeastOneUpdated = true
                     }
