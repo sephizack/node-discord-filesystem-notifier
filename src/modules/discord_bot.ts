@@ -233,7 +233,7 @@ module DiscordBot {
             }
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
-                notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
+                notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
                 if (config.has("thumbsUrl")) {
                     notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir)}.png`)
                 }
