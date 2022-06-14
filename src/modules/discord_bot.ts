@@ -237,11 +237,14 @@ module DiscordBot {
                 if (config.has("thumbsUrl")) {
                     notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir)}.png`)
                 }
-                notif.addField("Lien vers l'épisode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
+                notif.addField("Episode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
                 notif.addField("Dossier", `${baseUrl}/${encodeURIComponent(subdir)}`)
                 notif.setFooter('Retrouvez le mot de passe en message epinglé sur le discord')
             }
-            notif.addField("Nom du fichier", filename)
+            else
+            {
+                notif.addField("Nom du fichier", filename)
+            }
             return notif;
         }
     }
