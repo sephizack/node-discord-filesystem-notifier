@@ -13,5 +13,6 @@
 	"DirectoriesToWatch": [],
 	"skipAcutalNotif": false,
 	"publicFilesUrl": "",
+    "publicFilesHostname": "",
     "pollingInterval": 5
 }
