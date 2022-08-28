@@ -76,7 +76,7 @@ module DiscordBot {
         public dnsResolvePromise(domain) {
             return new Promise((resolve, reject) => {
                 dns.resolve4(domain, (err, addresses) => {
-                    if(err) reject(err);
+                    if(err || !addresses) reject(err);
                     resolve(""+addresses[0]);
                 });
            });
