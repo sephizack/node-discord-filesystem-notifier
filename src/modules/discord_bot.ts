@@ -188,9 +188,6 @@ module DiscordBot {
                 try {
                     let channel = await this.client.channels.fetch(aChannelId);
                     this.channelsToNotify.push(channel)
-                    channel.on('message', message => {
-                        this.handleSpecialMessage(message)
-                    });
                     Logger.ok(this.prefix(), `Channel with ID '${aChannelId}' ready to be notified`)
                 } catch (error) {
                     Logger.warning(this.prefix(), `Channel with ID '${aChannelId}' not found:`, error)
