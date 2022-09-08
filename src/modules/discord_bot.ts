@@ -67,9 +67,7 @@ module DiscordBot {
                 this.getChannels()
             });
             this.client.on('message', message => {
-                if (message.content === "!ip") {
-                    message.reply(new Discord.MessageEmbed().setTitle('IP Actuelle').setDescription(this.buildIpMessage()))
-                }
+                this.handleSpecialMessage(message)
             });
         }
 
@@ -177,12 +175,22 @@ module DiscordBot {
             }
         }
 
+        private handleSpecialMessage(message)
+        {
+            if (message.content === "!ip") {
+                message.reply(new Discord.MessageEmbed().setTitle('IP Actuelle').setDescription(this.buildIpMessage()))
+            }
+        }
+
         private async getChannels() {
             this.channelsToNotify = []
             for (let aChannelId of this.channelIDsToNotify) {
                 try {
                     let channel = await this.client.channels.fetch(aChannelId);
                     this.channelsToNotify.push(channel)
+                    channel.on('message', message => {
+                        this.handleSpecialMessage(message)
+                    });
                     Logger.ok(this.prefix(), `Channel with ID '${aChannelId}' ready to be notified`)
                 } catch (error) {
                     Logger.warning(this.prefix(), `Channel with ID '${aChannelId}' not found:`, error)
