@@ -36,7 +36,7 @@ for (let discordSetup of config.get("DiscordsBots")) {
     allDiscordsBots.push(aDiscordBot)
 }
 
-const kBufferSizeToHash = 1024*1024*2
+const kBufferSizeToHash = 1024*4
 const hashingBuffer = Buffer.allocUnsafe(kBufferSizeToHash);
 async function hashFile(path, stats){
     let beforeHash = new Date().getTime()
