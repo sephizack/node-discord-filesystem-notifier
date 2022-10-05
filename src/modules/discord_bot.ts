@@ -230,7 +230,7 @@ module DiscordBot {
             if (basedir !== '/') {
                 if (subdir.indexOf("Films") == 0 || subdir.indexOf("OAVs") == 0) {
                     notif.setDescription(`Un **nouvel OAV** est dispo sur le NAS !`)
-                    notif.setTitle("Nouvel OVA")
+                    notif.setTitle("Nouvel OAV")
                 } else {
                     notif.setDescription(`Un nouvel épisode de **${subdir.replace(/\//g, ' ')}** est dispo sur le NAS !`)
                     notif.setTitle(`${subdir.replace(/\//g, ' ')}`)
@@ -243,7 +243,7 @@ module DiscordBot {
                 let baseUrl = config.get("publicFilesUrl");
                 notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
                 if (config.has("thumbsUrl")) {
-                    notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir)}.png`)
+                    notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.replace(/\//g, ' '))}.png`)
                 }
                 notif.addField("Episode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
                 notif.addField("Dossier", `${baseUrl}/${encodeURIComponent(subdir)}`)
