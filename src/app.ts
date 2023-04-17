@@ -94,7 +94,7 @@ setTimeout(() => {
         
         Logger.debug(`File '${fileName}' has been added to directory '${subDir}' of watched dir '${baseDir}'`);
         for (let aDiscordBot of allDiscordsBots) {
-            aDiscordBot.sendNotif(baseDir, subDir, fileName);
+            aDiscordBot.sendNotif(baseDir, subDir, fileName, fileHash);
         }
     });
     Logger.info("Watching directories:", config.get("DirectoriesToWatch"))
