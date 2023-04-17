@@ -9,7 +9,7 @@ let myHttpsAgent = new https.Agent({
     rejectUnauthorized: false
 })
 
-const _episodeHashText = 'Episode Hash: ';
+const _episodeHashText = 'Hash: ';
 
 module DiscordBot {
 
@@ -223,12 +223,15 @@ module DiscordBot {
                     Logger.error('Exception while reading embeds', e)
                 }
             }
-            if (message.content === "!test") {
-
-                let aTestReply = new Discord.EmbedBuilder()
-                    .setTitle('Oui')
-                    .setDescription("http://sephizack.hopto.org:8111/OnePiece.mp4")
-                message.reply({ embeds: [aTestReply]})
+            if (message.content === "!test2") {
+                message.reply({ embeds: [
+                    this.buildNotifContent(
+                        'Mangas',
+                        'Kimetsu no Yaiba',
+                        'Demon Slayer S04E02 VOSTFR 1080p WEB [x264 AAC] -Tsundere-Raws (CR).mkv',
+                        '3033152882e129f27c5103bc5cc44bcdf0a15e160d445066ff'
+                    )]
+                })
             }
         }
 
@@ -271,6 +274,16 @@ module DiscordBot {
             super(token, notifyConfig, customData)
         }
 
+        public clarifyFileName(filename):any {
+            filename = filename.replace('VOSTFR', '')
+            filename = filename.replace('1080p', '')
+            filename = filename.replace('WEB', '')
+            filename = filename.replace('_', ' ')
+            filename = filename.replace(/ *\[.*?\] */g, "")
+            filename = filename.replace(/ *\([^)]*\) */g, "")
+            return filename
+        }
+
         public buildNotifContent(basedir, subdir, filename, hash):any {
             let notif = new Discord.EmbedBuilder();
             notif.setColor('#0099ff')
@@ -288,14 +301,14 @@ module DiscordBot {
                 notif.setTitle( "Nouvel épisode")
             }
             notif.addFields({
-                name: "Nom du fichier",
-                value: filename
+                name: "Episode",
+                value: this.clarifyFileName(filename)
             })
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
                 notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
                 if (config.has("thumbsUrl")) {
-                    notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.replace(/\//g, ' '))}.png`)
+                    notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.replace(/\//g, ' '))}.png`)
                 }
                 notif.addFields({
                     name: "Lien Episode",
