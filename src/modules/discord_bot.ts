@@ -1,4 +1,4 @@
-import Discord, { Base } from 'discord.js'
+import Discord from 'discord.js'
 import Logger from './logger.js'
 import config from 'config';
 import https from 'https'
@@ -28,7 +28,14 @@ module DiscordBot {
 
     export class BaseDiscordBot {
         public constructor(token: string, notifyConfig:any, customData:any) {
-            this.client = new Discord.Client();
+            this.client = new Discord.Client({
+                intents: [Discord.GatewayIntentBits.MessageContent
+                        ,Discord.GatewayIntentBits.GuildMessages
+                        ,Discord.GatewayIntentBits.DirectMessages
+                        ,Discord.GatewayIntentBits.GuildIntegrations
+                        ,Discord.GatewayIntentBits.Guilds]
+                
+            });
             this.differentIPTimeout = null
             this.currentIP = undefined
             this.domainName = config.has("publicFilesHostname") ? config.get("publicFilesHostname") : ""
@@ -65,11 +72,11 @@ module DiscordBot {
             this.client.on('ready', () => {
                 this.isConnected = true
                 this.botUsername = this.client.user.username
-                Logger.ok(this.prefix(), `Sucessfully logged in as ${this.client.user.tag} !`);
+                Logger.ok(this.prefix(), `Sucessfully logged in as ${this.client.user.tag} ! (Discriminator: ${this.client.user.discriminator})`);
                 //Logger.debug(this.prefix(), this.client);
                 this.getChannels()
             });
-            this.client.on('message', message => {
+            this.client.on(Discord.Events.MessageCreate, message => {
                 this.handleSpecialMessage(message)
             });
         }
@@ -128,10 +135,14 @@ module DiscordBot {
                     if (aAtLeastOneUpdated) {
                         if (this.domainIP != this.currentIP) {
                             this.differentIPTimeout = setTimeout(() => {
-                                let message = new Discord.MessageEmbed().setTitle('Difference d\'IP detectée !').setDescription(
-                                    '**L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !**\n' + this.buildIpMessage());
+                                let message = new Discord.EmbedBuilder()
+                                        .setTitle('Difference d\'IP detectée !')
+                                        .addFields({
+                                            name: 'L\'adresse IP du NAS est differente de celle du domaine depuis plus de 20 minutes !',
+                                            value: this.buildIpMessage()
+                                        });
                                 for (let aChannel of this.channelsToNotify) {
-                                    aChannel.send(message)
+                                    aChannel.send({ embeds: [message]})
                                 }
                                 Logger.ok("Notify for different IP sent!")
                             }, 1000*60*2);
@@ -179,15 +190,19 @@ module DiscordBot {
                     return
                 }
                 for (let aChannel of this.channelsToNotify) {
-                    aChannel.send(aNotification)
+                    aChannel.send({ embeds: [aNotification]})
                 }
             }
         }
 
         private handleSpecialMessage(message)
         {
+            if (message.author && message.author.discriminator == this.client.user.discriminator)
+            {
+                return
+            }
             if (message.content === "!ip") {
-                message.reply(new Discord.MessageEmbed().setTitle('IP Actuelle').setDescription(this.buildIpMessage()))
+                message.reply({ embeds: [new Discord.EmbedBuilder().setTitle('IP Actuelle').setDescription(this.buildIpMessage())]})
             }
             if (message.embeds && message.embeds.length > 0) {
                 try
@@ -207,6 +222,13 @@ module DiscordBot {
                 } catch(e) {
                     Logger.error('Exception while reading embeds', e)
                 }
+            }
+            if (message.content === "!test") {
+
+                let aTestReply = new Discord.EmbedBuilder()
+                    .setTitle('Oui')
+                    .setDescription("http://sephizack.hopto.org:8111/OnePiece.mp4")
+                message.reply({ embeds: [aTestReply]})
             }
         }
 
@@ -250,7 +272,7 @@ module DiscordBot {
         }
 
         public buildNotifContent(basedir, subdir, filename, hash):any {
-            let notif = new Discord.MessageEmbed();
+            let notif = new Discord.EmbedBuilder();
             notif.setColor('#0099ff')
 
             if (basedir !== '/') {
@@ -265,17 +287,22 @@ module DiscordBot {
                 notif.setDescription(`Un nouvel épisode est dispo sur le NAS !`)
                 notif.setTitle( "Nouvel épisode")
             }
-            notif.addField("Nom du fichier", filename)
+            notif.addFields({
+                name: "Nom du fichier",
+                value: filename
+            })
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
                 notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
                 if (config.has("thumbsUrl")) {
                     notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.replace(/\//g, ' '))}.png`)
                 }
-                notif.addField("Lien Episode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
-                //notif.addField("Lien Dossier", `${baseUrl}/${encodeURIComponent(subdir)}`)
+                notif.addFields({
+                    name: "Lien Episode",
+                    value: `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
+                })
             }
-            notif.setFooter(_episodeHashText+hash)
+            notif.setFooter({ text: _episodeHashText+hash })
             return notif;
         }
     }
