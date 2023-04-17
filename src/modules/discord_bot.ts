@@ -9,6 +9,8 @@ let myHttpsAgent = new https.Agent({
     rejectUnauthorized: false
 })
 
+const _episodeHashText = 'Episode Hash: ';
+
 module DiscordBot {
 
     export function createFromType(type:string, token: string, notifyConfig:any, customData:any) {
@@ -33,6 +35,7 @@ module DiscordBot {
             this.domainIP = undefined
             this.botUsername = "(not logged)"
             this.channelIDsToNotify = []
+            this.hashesToSkip = new Set()
             for (let aNotifyAction of notifyConfig) {
                 if (aNotifyAction['channel']) {
                     this.channelIDsToNotify.push(aNotifyAction['channel'])
@@ -149,11 +152,11 @@ module DiscordBot {
             }, 20000)
         }
 
-        public buildNotifContent(basedir, subdir, filename):any {
+        public buildNotifContent(basedir, subdir, filename, hash):any {
             return `File '${filename}' added to folder '${subdir}' in '${basedir}'`
         }
         
-        public sendNotif(basedir, subdir, filename) {
+        public sendNotif(basedir, subdir, filename, hash) {
             let fileExtension = filename.split('.').pop().toLowerCase()
             if (['mp4', 'mkv', 'avi'].indexOf(fileExtension) == -1) {
                 Logger.debug(`Notification skipped as file extension '${fileExtension}' is not elligible`)
@@ -164,8 +167,11 @@ module DiscordBot {
             else if (!this.isConnected) {
                 Logger.warning(this.prefix(), "Notification skipped as Bot is not connected")
             }
+            else if (this.hashesToSkip.has(hash)) {
+                Logger.ok(this.prefix(), "Notification skipped as Hash is known")
+            }
             else {
-                let aNotification = this.buildNotifContent(basedir, subdir, filename)
+                let aNotification = this.buildNotifContent(basedir, subdir, filename, hash)
                 Logger.debug(this.prefix(), "Notification content:", aNotification);
                 Logger.info(this.prefix(), "Sending notif message to discord...");
                 if (config.has("skipAcutalNotif") && config.get("skipAcutalNotif")) {
@@ -182,6 +188,25 @@ module DiscordBot {
         {
             if (message.content === "!ip") {
                 message.reply(new Discord.MessageEmbed().setTitle('IP Actuelle').setDescription(this.buildIpMessage()))
+            }
+            if (message.embeds && message.embeds.length > 0) {
+                try
+                {
+                    let aFirstEmbed = message.embeds[0]
+                    if (aFirstEmbed && aFirstEmbed.footer)
+                    {
+                        let aFooterText = aFirstEmbed.footer.text
+                        if (aFooterText.indexOf(_episodeHashText) !== -1) {
+                            let aHashToSkip = aFooterText.replace(_episodeHashText, '');
+                            this.hashesToSkip.add(aHashToSkip);
+                            Logger.debug('Will ignore hash:', aHashToSkip)
+                            // Now react of this message to flex
+                            message.react('👌');
+                        }
+                    }
+                } catch(e) {
+                    Logger.error('Exception while reading embeds', e)
+                }
             }
         }
 
@@ -216,6 +241,7 @@ module DiscordBot {
         channelsToNotify:any;
         differentIPTimeout:any;
         channelIDsToNotify:string[];
+        hashesToSkip:Set<string>;
     }
 
     export class AnimeDiscordBot extends BaseDiscordBot {
@@ -223,7 +249,7 @@ module DiscordBot {
             super(token, notifyConfig, customData)
         }
 
-        public buildNotifContent(basedir, subdir, filename):any {
+        public buildNotifContent(basedir, subdir, filename, hash):any {
             let notif = new Discord.MessageEmbed();
             notif.setColor('#0099ff')
 
@@ -239,20 +265,17 @@ module DiscordBot {
                 notif.setDescription(`Un nouvel épisode est dispo sur le NAS !`)
                 notif.setTitle( "Nouvel épisode")
             }
+            notif.addField("Nom du fichier", filename)
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
-                notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
+                notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
                 if (config.has("thumbsUrl")) {
                     notif.setThumbnail(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.replace(/\//g, ' '))}.png`)
                 }
-                notif.addField("Episode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
-                notif.addField("Dossier", `${baseUrl}/${encodeURIComponent(subdir)}`)
-                notif.setFooter('Retrouvez le mot de passe en message epinglé sur le discord')
+                notif.addField("Lien Episode", `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`)
+                //notif.addField("Lien Dossier", `${baseUrl}/${encodeURIComponent(subdir)}`)
             }
-            else
-            {
-                notif.addField("Nom du fichier", filename)
-            }
+            notif.setFooter(_episodeHashText+hash)
             return notif;
         }
     }
