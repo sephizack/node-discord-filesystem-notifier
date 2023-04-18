@@ -31,6 +31,7 @@
   },
   "scripts": {
     "start": "tsc && node dist/src/app.js",
+    "build": "tsc",
     "watch-node": "nodemon dist/src/app.js",
     "watch": "concurrently -k \"npm run watch-ts\" \"npm run watch-node\"",
     "watch-ts": "tsc -w",
