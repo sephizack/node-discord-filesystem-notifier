@@ -223,7 +223,7 @@ module DiscordBot {
                     Logger.error('Exception while reading embeds', e)
                 }
             }
-            if (message.content === "!test2") {
+            if (message.content === "!test") {
                 message.reply({ embeds: [
                     this.buildNotifContent(
                         'Mangas',
@@ -281,7 +281,8 @@ module DiscordBot {
             filename = filename.replace('_', ' ')
             filename = filename.replace(/ *\[.*?\] */g, "")
             filename = filename.replace(/ *\([^)]*\) */g, "")
-            return filename
+            filename = filename.replace(/\.[^/.]+$/, "")
+            return filename.trim()
         }
 
         public buildNotifContent(basedir, subdir, filename, hash):any {
