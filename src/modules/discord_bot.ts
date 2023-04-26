@@ -278,7 +278,7 @@ module DiscordBot {
             filename = filename.replace('VOSTFR', '')
             filename = filename.replace('1080p', '')
             filename = filename.replace('WEB', '')
-            filename = filename.replace('_', ' ')
+            filename = filename.replace(/_/g, ' ')
             filename = filename.replace(/ *\[.*?\] */g, "")
             filename = filename.replace(/ *\([^)]*\) */g, "")
             filename = filename.replace(/\.[^/.]+$/, "")
