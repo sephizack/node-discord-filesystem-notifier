@@ -42,9 +42,9 @@ async function hashFile(path, stats){
     let beforeHash = new Date().getTime()
     let fileHandler = await fs.open(path, 'r')
     let fileSize:number = stats.size
-    let fileDataSample = fileHandler.read(hashingBuffer, 0, Math.min(kBufferSizeToHash, fileSize/4), fileSize/2)
+    fileHandler.read(hashingBuffer, 0, Math.min(kBufferSizeToHash, fileSize/4), fileSize/2)
     fileHandler.close()
-    let fileHash = ""+fileSize+sha1(fileDataSample)
+    let fileHash = ""+fileSize+sha1(hashingBuffer)
     Logger.debug(`File hashed in ${new Date().getTime() - beforeHash} ms`)
     return fileHash
 }
