@@ -38,9 +38,11 @@ for (let discordSetup of config.get("DiscordsBots")) {
 
 const kBufferSizeToHash = 1024*4
 async function hashFile(path, stats) {
+    let fileSize:number = stats.size;
+    return ""+fileSize
+    // Reading file make unconsistent hashes (probably a race condition with buffers) TOFIX
     let beforeHash = new Date().getTime()
     let fileHandler = await fs.open(path, 'r')
-    let fileSize:number = stats.size;
     let hashingBuffer = Buffer.allocUnsafe(kBufferSizeToHash);
     fileHandler.read(hashingBuffer, 0, Math.min(kBufferSizeToHash, fileSize/4), fileSize/2)
     let fileHash = ""+fileSize+sha1(hashingBuffer)
