@@ -50,10 +50,19 @@ module DiscordBot {
             }
             this.checkIPAdresses()
             this.setupClient()
-            this.client.login(token).catch((error) => {
-                Logger.error(this.prefix(), "Unable to conect to Discord", error)
-                this.isConnected = false
-            });
+
+            let thisBot = this;
+            let discordLogin = () => {
+                if (!thisBot.isConnected) {
+                    Logger.info(thisBot.prefix(), "Appempting connection to discord")
+                    thisBot.client.login(token).catch((error) => {
+                        Logger.error(thisBot.prefix(), "Unable to conect to Discord", error)
+                        thisBot.isConnected = false
+                    });
+                }
+            }
+            discordLogin();
+            setInterval(discordLogin, 2*60*1000);
         }
 
         private buildIpMessage() {
@@ -75,6 +84,9 @@ module DiscordBot {
                 Logger.ok(this.prefix(), `Sucessfully logged in as ${this.client.user.tag} ! (Discriminator: ${this.client.user.discriminator})`);
                 //Logger.debug(this.prefix(), this.client);
                 this.getChannels()
+            });
+            this.client.on('disconnect', () => {
+                this.isConnected = false
             });
             this.client.on(Discord.Events.MessageCreate, message => {
                 this.handleSpecialMessage(message)
