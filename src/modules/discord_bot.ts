@@ -321,7 +321,7 @@ module DiscordBot {
                 let baseUrl = config.get("publicFilesUrl");
                 notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
                 if (config.has("thumbsUrl")) {
-                    notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.replace(/\//g, ' '))}.png`)
+                    notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.split('/')[0])}.png`)
                 }
                 notif.addFields({
                     name: "Lien Episode",
