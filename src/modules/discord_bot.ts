@@ -202,7 +202,7 @@ module DiscordBot {
                     return
                 }
                 for (let aChannel of this.channelsToNotify) {
-                    aChannel.send({ embeds: [aNotification]})
+                    aChannel.send(aNotification)
                 }
             }
         }
@@ -236,14 +236,14 @@ module DiscordBot {
                 }
             }
             if (message.content === "!test") {
-                message.reply({ embeds: [
+                message.reply(
                     this.buildNotifContent(
                         'Mangas',
                         'Kimetsu no Yaiba',
                         'Demon Slayer S04E02 VOSTFR 1080p WEB [x264 AAC] -Tsundere-Raws (CR).mkv',
                         '3033152882e129f27c5103bc5cc44bcdf0a15e160d445066ff'
-                    )]
-                })
+                    )
+                )
             }
         }
 
@@ -317,19 +317,35 @@ module DiscordBot {
                 name: "Episode",
                 value: this.clarifyFileName(filename)
             })
+            let actionRow = new Discord.ActionRowBuilder();
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
                 notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
                 if (config.has("thumbsUrl")) {
                     notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.split('/')[0])}.png`)
                 }
-                notif.addFields({
-                    name: "Lien Episode",
-                    value: `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
-                })
+                let episodeURL = `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
+                
+                let buttonEpisode = new Discord.ButtonBuilder();
+                buttonEpisode.setLabel('Télécharger')
+                buttonEpisode.setStyle(Discord.ButtonStyle.Link)
+                buttonEpisode.setEmoji('📺')
+                buttonEpisode.setURL(episodeURL)
+                
+                let buttonFolder = new Discord.ButtonBuilder();
+                buttonFolder.setLabel(`${subdir}`)
+                buttonFolder.setStyle(Discord.ButtonStyle.Link)
+                buttonFolder.setEmoji('📂')
+                buttonFolder.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
+                
+                actionRow.addComponents(buttonEpisode)
+                actionRow.addComponents(buttonFolder)
             }
             notif.setFooter({ text: _episodeHashText+hash })
-            return notif;
+
+            let messageContent = { embeds: [notif], components: [actionRow] }
+            console.log(JSON.stringify(messageContent, null, 4));
+            return messageContent
         }
     }
 }
