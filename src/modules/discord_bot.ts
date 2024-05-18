@@ -320,12 +320,12 @@ module DiscordBot {
             let actionRow = new Discord.ActionRowBuilder();
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
                 let baseUrl = config.get("publicFilesUrl");
-                notif.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
+                let episodeURL = `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
+                notif.setURL(episodeURL)
                 if (config.has("thumbsUrl")) {
                     notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.split('/')[0])}.png`)
                 }
-                let episodeURL = `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
-                
+
                 let buttonEpisode = new Discord.ButtonBuilder();
                 buttonEpisode.setLabel('Télécharger')
                 buttonEpisode.setStyle(Discord.ButtonStyle.Link)
