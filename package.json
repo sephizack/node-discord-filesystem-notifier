@@ -13,7 +13,7 @@
   "dependencies": {
     "@discordjs/rest": "^1.7.0",
     "axios": "^0.27.2",
-    "chokidar": "^3.5.2",
+    "chokidar": "^4.0.1",
     "config": "^3.2.4",
     "discord-api-types": "^0.37.39",
     "discord.js": "^14.9.0",
@@ -31,7 +31,7 @@
   },
   "scripts": {
     "start": "tsc && node dist/src/app.js",
-    "build": "tsc",
+    "build": "tsc  --skipLibCheck",
     "watch-node": "nodemon dist/src/app.js",
     "watch": "concurrently -k \"npm run watch-ts\" \"npm run watch-node\"",
     "watch-ts": "tsc -w",
