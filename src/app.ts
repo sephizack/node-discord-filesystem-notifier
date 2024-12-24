@@ -56,7 +56,7 @@ let alreadySeenHashes = {}
 // Initialize File watcher
 setTimeout(() => {
     const fileWatcher = chokidar.watch(config.get("DirectoriesToWatch"), {
-        ignored: /(^|[\/\\])(\.|@)./, // ignore dotfiles and @files
+        ignored: /(^|[\/\\])(\.|@|_)./, // ignore dotfiles and @files and _files
         persistent: true,
         ignoreInitial: false,
         usePolling: true,
