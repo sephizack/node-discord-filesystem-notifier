@@ -109,7 +109,7 @@ module DiscordBot {
             try {
                 // Logger.debug('Checking IP adresses...')
                 let aAtLeastOneUpdated = false;
-                let ipResult = await axios.get('https://api.ipify.org', { httpsAgent:myHttpsAgent, timeout:0 })
+                let ipResult = await axios.get('https://api6.ipify.org', { httpsAgent:myHttpsAgent, timeout:0 })
                 // Logger.debug("IP reply", ipResult.data)
                 if (ipResult.status == 200)
                 {
@@ -323,7 +323,7 @@ module DiscordBot {
                 let episodeURL = `${baseUrl}/${encodeURIComponent(subdir)}/${encodeURIComponent(filename)}`
                 notif.setURL(episodeURL)
                 if (config.has("thumbsUrl")) {
-                    notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.split('/')[0])}.png`)
+                    notif.setImage(`${config.get("thumbsUrl")}/${encodeURIComponent(subdir.split('/')[0])}.png?rnd=`+Math.floor(Math.random() * 9999999999))
                 }
 
                 let buttonEpisode = new Discord.ButtonBuilder();
