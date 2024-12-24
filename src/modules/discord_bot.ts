@@ -176,7 +176,7 @@ module DiscordBot {
             }, 20000)
         }
 
-        public async buildNotifContent(basedir, subdir, filename, hash):any {
+        public async buildNotifContent(basedir, subdir, filename, hash) : Promise<any> {
             return `File '${filename}' added to folder '${subdir}' in '${basedir}'`
         }
         
@@ -298,7 +298,7 @@ module DiscordBot {
             return filename.trim()
         }
 
-        public async buildNotifContent(basedir, subdir, filename, hash) {
+        public async buildNotifContent(basedir, subdir, filename, hash) : Promise<any> {
             let notif = new Discord.EmbedBuilder();
             notif.setColor('#0099ff')
 
