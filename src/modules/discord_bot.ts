@@ -351,7 +351,7 @@ module DiscordBot {
                 buttonEpisode.setURL(episodeURL)
                 
                 let buttonFolder = new Discord.ButtonBuilder();
-                buttonFolder.setLabel(`${subdir}`)
+                buttonFolder.setLabel(subdir.length > 80 ? subdir.substring(0, 77) + '...' : subdir)
                 buttonFolder.setStyle(Discord.ButtonStyle.Link)
                 buttonFolder.setEmoji('📂')
                 buttonFolder.setURL(`${baseUrl}/${encodeURIComponent(subdir)}`)
@@ -377,65 +377,71 @@ module DiscordBot {
 
         // Copy paste from clean bot discord (to refactor one day)
         public async getImdbData(search: string) {
-            if (_cacheImdbData[search]) {
-                return _cacheImdbData[search]
-            }
-            let imdbData :any = {}
-            let reply = await this.callApi(`https://www.imdb.com/find/?q=${encodeURIComponent(search)}`, null, "GET", "");
-            if (reply.status != 200)
-            {
-                Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search, reply)
-                return null
-            }
-            let links = reply.data.split('href="/title/')
-            if (links.length == 0)
-            {
-                Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search)
-                return null
-            }
-
-            let bestImdbId = links[1].split('/')[0]
-            Logger.info("Imdb get", "retrieveImdbInfos", "Found imdbId for "+search, bestImdbId)
-
-            let replyImdbPage = await this.callApi(`https://www.imdb.com/title/${bestImdbId}/`, null, "GET", "");
-            if (replyImdbPage.status != 200)
-            {
-                Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb page for id "+search, reply)
-                return null
-            }
-            imdbData.url = `https://www.imdb.com/title/${bestImdbId}`
-
-            let pageHtml = replyImdbPage.data
             try {
-                // Image
-                let posterImgUrl = pageHtml.split('hero-media__poster')[1].split('sizes="')[0].split('https://').pop().split(' ')[0]
-                imdbData.image = 'https://' + posterImgUrl
-                Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb poster")
-
-                // Title
-                let title = pageHtml.split('<title>')[1].split('</title>')[0].split('(')[0].trim()
-                imdbData.title = title
-                Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb title", title)
-
-                // Ratings
-                let ratingStart = pageHtml.split('hero-rating-bar__aggregate-rating__score')
-                if (ratingStart.length == 1)
+                if (_cacheImdbData[search]) {
+                    return _cacheImdbData[search]
+                }
+                let imdbData :any = {}
+                let reply = await this.callApi(`https://www.imdb.com/find/?q=${encodeURIComponent(search)}`, null, "GET", "");
+                if (reply.status != 200)
                 {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb rating for id "+search)
+                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search, reply)
                     return null
                 }
-                let ratingHtml = ratingStart[1].split('</span>')
-                let average = ratingHtml[0].split('>')[2]
-                let votes = ratingHtml[2].split('>')[4].split('<')[0]
-                imdbData.review = average
-                imdbData.imdb_reviews = `**${average}/10** (${votes} votes)`
-                Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb ratings ")                
+                let links = reply.data.split('href="/title/')
+                if (links.length == 0)
+                {
+                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search)
+                    return null
+                }
+
+                let bestImdbId = links[1].split('/')[0]
+                Logger.info("Imdb get", "retrieveImdbInfos", "Found imdbId for "+search, bestImdbId)
+
+                let replyImdbPage = await this.callApi(`https://www.imdb.com/title/${bestImdbId}/`, null, "GET", "");
+                if (replyImdbPage.status != 200)
+                {
+                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb page for id "+search, reply)
+                    return null
+                }
+                imdbData.url = `https://www.imdb.com/title/${bestImdbId}`
+
+                let pageHtml = replyImdbPage.data
+                try {
+                    // Image
+                    let posterImgUrl = pageHtml.split('hero-media__poster')[1].split('sizes="')[0].split('https://').pop().split(' ')[0]
+                    imdbData.image = 'https://' + posterImgUrl
+                    Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb poster")
+
+                    // Title
+                    let title = pageHtml.split('<title>')[1].split('</title>')[0].split('(')[0].trim()
+                    imdbData.title = title
+                    Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb title", title)
+
+                    // Ratings
+                    let ratingStart = pageHtml.split('hero-rating-bar__aggregate-rating__score')
+                    if (ratingStart.length == 1)
+                    {
+                        Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb rating for id "+search)
+                        return null
+                    }
+                    let ratingHtml = ratingStart[1].split('</span>')
+                    let average = ratingHtml[0].split('>')[2]
+                    let votes = ratingHtml[2].split('>')[4].split('<')[0]
+                    imdbData.review = average
+                    imdbData.imdb_reviews = `**${average}/10** (${votes} votes)`
+                    Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb ratings ")                
+                }
+                catch (e) {
+                    Logger.error("Imdb get", "retrieveImdbInfos", "Error while parsing imdb page for "+search)
+                }
+                _cacheImdbData[search] = imdbData
+                return imdbData
             }
             catch (e) {
-                Logger.error("Imdb get", "retrieveImdbInfos", "Error while parsing imdb page for "+search)
+                Logger.error("Imdb get", "retrieveImdbInfos", "Error while getting imdb data for "+search, e)
+                return null
             }
-            _cacheImdbData[search] = imdbData
-            return imdbData
         }
 
         protected async sleep(ms) {
