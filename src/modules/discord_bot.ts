@@ -461,16 +461,16 @@ module DiscordBot {
             try {
                 response = await fetch(url, {
                     "headers": {
-                        "accept": "*/*",
+                        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                         "accept-language": "en-US,en;q=0.9",
                         "content-type": "application/json; charset=UTF-8",
-                        "sec-ch-ua": "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\"",
+                        "sec-ch-ua": "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
                         "sec-ch-ua-mobile": "?0",
                         "sec-ch-ua-platform": "\"macOS\"",
-                        "sec-fetch-dest": "empty",
-                        "sec-fetch-mode": "cors",
+                        "sec-fetch-dest": "document",
+                        "sec-fetch-mode": "navigate",
                         "sec-fetch-site": "same-origin",
-                        "x-requested-with": "XMLHttpRequest",
+                        "sec-fetch-user": "?1",
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                         "Authorization": auth_header == "" ? null : auth_header
                     },
