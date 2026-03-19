@@ -317,17 +317,26 @@ module DiscordBot {
 
             let imdbData = await this.getImdbData(subdir.split('/')[0])
             Logger.debug("IMDB Data", imdbData)
-            if (imdbData && imdbData.imdb_reviews) {
-                notif.addFields({
-                    name: "Note IMDb",
-                    value: imdbData.imdb_reviews
-                })
+            if (imdbData && imdbData.rating) {
+                if(imdbData.rating.aggregateRating)
+                {
+                    let imdbRatingString = `**${imdbData.rating.aggregateRating}/10**`
+                    if(imdbData.rating.voteCount)
+                    {
+                        imdbRatingString += ` (${imdbData.rating.voteCount} votes)`
+                    }
+                    notif.addFields({
+                        name: "Note IMDb",
+                        value: imdbRatingString
+                    })
+                }
             }
 
             notif.addFields({
                 name: "Episode",
                 value: this.clarifyFileName(filename)
             })
+
 
             let actionRow = new Discord.ActionRowBuilder();
             if (config.has("publicFilesUrl") && config.get("publicFilesUrl") !== "") {
@@ -336,8 +345,8 @@ module DiscordBot {
                 notif.setURL(episodeURL)
                 
                 let thumbsUrl = ''
-                if (imdbData && imdbData.image) {
-                    thumbsUrl = imdbData.image
+                if (imdbData && imdbData.primaryImage && imdbData.primaryImage.url) {
+                    thumbsUrl = imdbData.primaryImage.url
                 } else if (config.has("thumbsUrl")) {
                     thumbsUrl = `${config.get("thumbsUrl")}/${encodeURIComponent(subdir.split('/')[0])}.png`
                 }
@@ -359,12 +368,12 @@ module DiscordBot {
                 actionRow.addComponents(buttonEpisode)
                 actionRow.addComponents(buttonFolder)
 
-                if (imdbData && imdbData.url) {
+                if (imdbData && imdbData.id) {
                     let buttonImdb = new Discord.ButtonBuilder();
                     buttonImdb.setLabel('IMDb')
                     buttonImdb.setStyle(Discord.ButtonStyle.Link)
                     buttonImdb.setEmoji('🌟')
-                    buttonImdb.setURL(imdbData.url)
+                    buttonImdb.setURL(`https://www.imdb.com/title/${imdbData.id}`)
                     actionRow.addComponents(buttonImdb)
                 }
             }
@@ -375,74 +384,27 @@ module DiscordBot {
             return messageContent
         }
 
-        // Copy paste from clean bot discord (to refactor one day)
-        public async getImdbData(search: string) {
+        public async getImdbData(search:string)
+        {
             try {
                 if (_cacheImdbData[search]) {
                     return _cacheImdbData[search]
                 }
-                let imdbData :any = {}
-                let reply = await this.callApi(`https://www.imdb.com/find/?q=${encodeURIComponent(search)}`, null, "GET", "");
+                let reply = await this.callApi(`https://api.imdbapi.dev/search/titles?query=${encodeURIComponent(search)}`, null, "GET", "");
                 if (reply.status != 200)
                 {
                     Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search, reply)
                     return null
                 }
-                let prefixUsed = '/title/'
-                let links = reply.data.split(`href="${prefixUsed}`)
-                if (links.length == 0)
+                if(reply.data.titles && reply.data.titles.length > 0)
                 {
-                    prefixUsed = '/fr/title/'
-                    links = reply.data.split(`href="${prefixUsed}`)
+                    return reply.data.titles[0];
                 }
-                if (links.length == 0)
+                else
                 {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search)
+                    Logger.error("Imdb get", "retrieveImdbInfos", "Nothing found for IMDB search: "+search)
                     return null
                 }
-
-                let bestImdbId = links[1].split('/')[0]
-                Logger.info("Imdb get", "retrieveImdbInfos", "Found imdbId for "+search, bestImdbId)
-
-                let replyImdbPage = await this.callApi(`https://www.imdb.com${prefixUsed}${bestImdbId}/`, null, "GET", "");
-                if (replyImdbPage.status != 200)
-                {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb page for id "+search, replyImdbPage)
-                    return null
-                }
-                imdbData.url = `https://www.imdb.com${prefixUsed}${bestImdbId}`
-
-                let pageHtml = replyImdbPage.data
-                try {
-                    // Image
-                    let posterImgUrl = pageHtml.split('hero-media__poster')[1].split('sizes="')[0].split('https://').pop().split(' ')[0]
-                    imdbData.image = 'https://' + posterImgUrl
-                    Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb poster")
-
-                    // Title
-                    let title = pageHtml.split('<title>')[1].split('</title>')[0].split('(')[0].trim()
-                    imdbData.title = title
-                    Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb title", title)
-
-                    // Ratings
-                    let ratingStart = pageHtml.split('hero-rating-bar__aggregate-rating__score')
-                    if (ratingStart.length == 1)
-                    {
-                        Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb rating for id "+search)
-                        return null
-                    }
-                    let ratingHtml = ratingStart[1].split('</span>')
-                    let average = ratingHtml[0].split('>')[2]
-                    let votes = ratingHtml[2].split('>')[4].split('<')[0]
-                    imdbData.review = average
-                    imdbData.imdb_reviews = `**${average}/10** (${votes} votes)`
-                    Logger.info("Imdb get", "retrieveImdbInfos", "Found imdb ratings ")                
-                }
-                catch (e) {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Error while parsing imdb page for "+search)
-                }
-                _cacheImdbData[search] = imdbData
-                return imdbData
             }
             catch (e) {
                 Logger.error("Imdb get", "retrieveImdbInfos", "Error while getting imdb data for "+search, e)
@@ -454,12 +416,12 @@ module DiscordBot {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        private async callApi(url = '', body = {}, method = 'POST', auth_header = "") 
+        private async callApi(url = '', body = {}, method = 'POST', auth_header = "") : Promise<any>
         {
             await this.sleep(277);
             let response = null;
             try {
-                response = await fetch(url, {
+                let headers: any = {
                     "headers": {
                         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                         "accept-language": "en-US,en;q=0.9",
@@ -474,57 +436,38 @@ module DiscordBot {
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                         "Authorization": auth_header == "" ? null : auth_header
                     },
-                    "body": body == null ? null : JSON.stringify(body),
                     "method": method
-                });
+                };
+                if(method != "GET")
+                {
+                    headers.body = body == null ? null : JSON.stringify(body)
+                }
+                response = await fetch(url, headers);
             }
             catch (e)
             {
                 Logger.error("Error while calling API "+url, e);
                 return {
                     status: 500,
-                    error: e,
-                    isJson: false
+                    error: e
                 }
             }
             
-
-            let rawData:any = await response.text();
+            let jsonData:any = await response.json();
             if (response.status != 200 && response.status != 201)
             {
                 return {
                     status: response.status,
-                    error: response.statusText + " - " + rawData,
-                    isJson: false
+                    error: response.statusText + " - " + jsonData
                 }
             }
-            let isJson = false
-            try {
-                rawData = JSON.parse(rawData);
-                isJson = true;
-            }
-            catch (e) {
-                // Not json
-            }
-			if (isJson && rawData.status == 400)
-			{
-				rawData.error = rawData.message
-			}
-
-			if (isJson && rawData.error)
-			{
-				return {
-					status: 500,
-					error: rawData.error,
-					isJson: false
-				}
-			}
+            
             return {
                 status: response.status,
-                isJson: isJson,
-                data: rawData
+                data: jsonData
             }
         }
+
     }
 }
 
