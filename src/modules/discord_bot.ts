@@ -388,7 +388,13 @@ module DiscordBot {
                     Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search, reply)
                     return null
                 }
-                let links = reply.data.split('href="/title/')
+                let prefixUsed = '/title/'
+                let links = reply.data.split(`href="${prefixUsed}`)
+                if (links.length == 0)
+                {
+                    prefixUsed = '/fr/title/'
+                    links = reply.data.split(`href="${prefixUsed}`)
+                }
                 if (links.length == 0)
                 {
                     Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search)
@@ -398,13 +404,13 @@ module DiscordBot {
                 let bestImdbId = links[1].split('/')[0]
                 Logger.info("Imdb get", "retrieveImdbInfos", "Found imdbId for "+search, bestImdbId)
 
-                let replyImdbPage = await this.callApi(`https://www.imdb.com/title/${bestImdbId}/`, null, "GET", "");
+                let replyImdbPage = await this.callApi(`https://www.imdb.com${prefixUsed}${bestImdbId}/`, null, "GET", "");
                 if (replyImdbPage.status != 200)
                 {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb page for id "+search, reply)
+                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb page for id "+search, replyImdbPage)
                     return null
                 }
-                imdbData.url = `https://www.imdb.com/title/${bestImdbId}`
+                imdbData.url = `https://www.imdb.com${prefixUsed}${bestImdbId}`
 
                 let pageHtml = replyImdbPage.data
                 try {
