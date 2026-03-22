@@ -312,10 +312,11 @@ module DiscordBot {
                 }
             } else {
                 notif.setDescription(`Un nouvel épisode est dispo sur le NAS !`)
-                notif.setTitle( "Nouvel épisode")
+                notif.setTitle("Nouvel épisode")
             }
 
-            let imdbData = await this.getImdbData(subdir.split('/')[0])
+
+            let imdbData = await this.getImdbData(subdir.split('/').join(' '))
             Logger.debug("IMDB Data", imdbData)
             if (imdbData && imdbData.rating) {
                 if(imdbData.rating.aggregateRating)
@@ -384,6 +385,50 @@ module DiscordBot {
             return messageContent
         }
 
+        public normalizeStr(str)
+        {
+            str = str.replaceAll(":", "")
+            str = str.replaceAll("!", "")
+            str = str.replaceAll("?", "")
+            str = str.replaceAll(".", "")
+            str = str.toLowerCase()
+            str = str.trim()
+            return str;
+        }
+
+        public getBestMatchingShow(titles, originalSearch)
+        {
+            let bestIndex = 0;
+            let bestNbMatchingWords = 0;
+            let originalSearchWords = originalSearch.split(" ");
+            originalSearchWords = originalSearchWords.map((e) => {
+                e = this.normalizeStr(e)
+                return e;
+            });
+            console.log("original search words:", originalSearchWords)
+            for(let i=0; i<titles.length; ++i)
+            {
+                let currentTitle = titles[i];
+                console.log("Title:", currentTitle.primaryTitle);
+                let currentTitleWords = currentTitle.primaryTitle.split(" ");
+                let nbMatchingWords = 0;
+                for(let word of currentTitleWords)
+                {
+                    if(originalSearchWords.indexOf(this.normalizeStr(word)) != -1)
+                    {
+                        nbMatchingWords++;
+                    }
+                }
+                console.log("Matching words:", nbMatchingWords);
+                if(nbMatchingWords > bestNbMatchingWords)
+                {
+                    bestNbMatchingWords = nbMatchingWords;
+                    bestIndex = i;
+                }
+            }
+            return titles[bestIndex];
+        }
+
         public async getImdbData(search:string)
         {
             try {
@@ -398,7 +443,7 @@ module DiscordBot {
                 }
                 if(reply.data.titles && reply.data.titles.length > 0)
                 {
-                    return reply.data.titles[0];
+                    return this.getBestMatchingShow(reply.data.titles, search);
                 }
                 else
                 {
