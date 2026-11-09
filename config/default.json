@@ -1,4 +1,7 @@
 {
+	"ztBot": {
+		"tmdbAccessToken": ""
+	},
 	"DiscordsBots": [
 		{
 			"type": "YOUR_TYPE",

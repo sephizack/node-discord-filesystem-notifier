@@ -10,7 +10,18 @@ let myHttpsAgent = new https.Agent({
 })
 
 const _episodeHashText = 'Hash: ';
-let _cacheImdbData = {}
+interface TmdbTitle {
+    id: number;
+    media_type: 'movie' | 'tv';
+    title?: string;
+    name?: string;
+    original_title?: string;
+    original_name?: string;
+    vote_average: number;
+    vote_count: number;
+    poster_path: string | null;
+}
+let _cacheTmdbData = new Map<string, TmdbTitle>()
 
 module DiscordBot {
 
@@ -343,21 +354,18 @@ module DiscordBot {
             }
 
 
-            let imdbData = await this.getImdbData(this.filterSearchInput(subdir))
-            Logger.debug("IMDB Data", imdbData)
-            if (imdbData && imdbData.rating) {
-                if(imdbData.rating.aggregateRating)
+            let tmdbData = await this.getTmdbData(this.filterSearchInput(subdir))
+            Logger.debug("TMDb Data", tmdbData)
+            if (tmdbData && tmdbData.vote_count > 0) {
+                let tmdbRatingString = `**${tmdbData.vote_average}/10**`
+                if(tmdbData.vote_count)
                 {
-                    let imdbRatingString = `**${imdbData.rating.aggregateRating}/10**`
-                    if(imdbData.rating.voteCount)
-                    {
-                        imdbRatingString += ` (${imdbData.rating.voteCount} votes)`
-                    }
-                    notif.addFields({
-                        name: "Note IMDb",
-                        value: imdbRatingString
-                    })
+                    tmdbRatingString += ` (${tmdbData.vote_count} votes)`
                 }
+                notif.addFields({
+                    name: "Note TMDb",
+                    value: tmdbRatingString
+                })
             }
 
             notif.addFields({
@@ -389,8 +397,8 @@ module DiscordBot {
                 let thumbsUrl = ''
                 if (isSephiImageUrlValid) {
                     thumbsUrl = sephiImageUrl
-                } else if (imdbData && imdbData.primaryImage && imdbData.primaryImage.url) {
-                    thumbsUrl = imdbData.primaryImage.url
+                } else if (tmdbData && tmdbData.poster_path) {
+                    thumbsUrl = `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}`
                 }
                 if (thumbsUrl) {
                     notif.setImage(thumbsUrl)
@@ -410,13 +418,13 @@ module DiscordBot {
                 actionRow.addComponents(buttonEpisode)
                 actionRow.addComponents(buttonFolder)
 
-                if (imdbData && imdbData.id) {
-                    let buttonImdb = new Discord.ButtonBuilder();
-                    buttonImdb.setLabel('IMDb')
-                    buttonImdb.setStyle(Discord.ButtonStyle.Link)
-                    buttonImdb.setEmoji('🌟')
-                    buttonImdb.setURL(`https://www.imdb.com/title/${imdbData.id}`)
-                    actionRow.addComponents(buttonImdb)
+                if (tmdbData && tmdbData.id) {
+                    let buttonTmdb = new Discord.ButtonBuilder();
+                    buttonTmdb.setLabel('TMDb')
+                    buttonTmdb.setStyle(Discord.ButtonStyle.Link)
+                    buttonTmdb.setEmoji('🌟')
+                    buttonTmdb.setURL(`https://www.themoviedb.org/${tmdbData.media_type}/${tmdbData.id}`)
+                    actionRow.addComponents(buttonTmdb)
                 }
             }
             notif.setFooter({ text: _episodeHashText+hash })
@@ -437,7 +445,7 @@ module DiscordBot {
             return str;
         }
 
-        public getBestMatchingShow(titles, originalSearch)
+        public getBestMatchingShow(titles: TmdbTitle[], originalSearch: string): TmdbTitle
         {
             let bestNbMatchingWords = 0;
             let originalSearchWords = originalSearch.split(" ");
@@ -446,12 +454,13 @@ module DiscordBot {
                 return e;
             });
             console.log("original search words:", originalSearchWords)
-            let bestTitles = []
+            let bestTitles: TmdbTitle[] = []
             for(let i=0; i<titles.length; ++i)
             {
                 let currentTitle = titles[i];
-                console.log("Title:", currentTitle.primaryTitle);
-                let currentTitleWords = currentTitle.primaryTitle.split(" ");
+                let titleName = currentTitle.title || currentTitle.name || currentTitle.original_title || currentTitle.original_name || '';
+                console.log("Title:", titleName);
+                let currentTitleWords = titleName.split(" ");
                 let nbMatchingWords = 0;
                 for(let word of currentTitleWords)
                 {
@@ -474,13 +483,11 @@ module DiscordBot {
             console.log("Best matching titles:", bestTitles);
             // Remove titles with very low rating (less than 3/10), or low vote count (less than 500 votes)
             bestTitles = bestTitles.filter((title) => {
-                if (title.rating) {
-                    if (title?.rating?.aggregateRating && title.rating.aggregateRating < 3) {
-                        return false;
-                    }
-                    if (title?.rating?.voteCount && title.rating.voteCount < 500) {
-                        return false;
-                    }
+                if (title.vote_average && title.vote_average < 3) {
+                    return false;
+                }
+                if (title.vote_count && title.vote_count < 500) {
+                    return false;
                 }
                 return true;
             })
@@ -492,36 +499,43 @@ module DiscordBot {
             return bestTitles[0];
         }
 
-        public async getImdbData(search:string)
+        public async getTmdbData(search:string): Promise<TmdbTitle | null>
         {
-            console.log("Getting IMDB data for search:", search)
+            console.log("Getting TMDb data for search:", search)
             try {
-                if (_cacheImdbData[search]) {
-                    console.log("Returning cached IMDB data for search:", search)
-                    return _cacheImdbData[search]
+                let cachedTitle = _cacheTmdbData.get(search);
+                if (cachedTitle) {
+                    console.log("Returning cached TMDb data for search:", search)
+                    return cachedTitle
                 }
-                let reply = await this.callApi(`https://api.imdbapi.dev/search/titles?query=${encodeURIComponent(search)}`, null, "GET", "");
-                if (reply.status != 200)
-                {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Cannot find imdb id for "+search, reply)
+                if (!config.has("ztBot.tmdbAccessToken") || !config.get("ztBot.tmdbAccessToken")) {
+                    Logger.warning("TMDb access token missing: configure ztBot.tmdbAccessToken")
                     return null
                 }
-                if(reply.data.titles && reply.data.titles.length > 0)
+                let token = config.get("ztBot.tmdbAccessToken");
+                let reply = await this.callApi(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(search)}&language=fr-FR&include_adult=false`, {}, "GET", `Bearer ${token}`);
+                if (reply.status != 200)
                 {
-                    let bestMatch = this.getBestMatchingShow(reply.data.titles, search);
+                    Logger.error("TMDb get", "getTmdbData", "Cannot find TMDb title for "+search, reply)
+                    return null
+                }
+                let titles: TmdbTitle[] = (reply.data.results || []).filter((title: {media_type: string}) => title.media_type === 'movie' || title.media_type === 'tv');
+                if(titles.length > 0)
+                {
+                    let bestMatch = this.getBestMatchingShow(titles, search);
                     // Cache the result to avoid future API calls for the same search
-                    _cacheImdbData[search] = bestMatch;
-                    Logger.debug("Cached IMDB data for search:", search)
+                    _cacheTmdbData.set(search, bestMatch);
+                    Logger.debug("Cached TMDb data for search:", search)
                     return bestMatch;
                 }
                 else
                 {
-                    Logger.error("Imdb get", "retrieveImdbInfos", "Nothing found for IMDB search: "+search)
+                    Logger.error("TMDb get", "getTmdbData", "Nothing found for TMDb search: "+search)
                     return null
                 }
             }
             catch (e) {
-                Logger.error("Imdb get", "retrieveImdbInfos", "Error while getting imdb data for "+search, e)
+                Logger.error("TMDb get", "getTmdbData", "Error while getting TMDb data for "+search, e)
                 return null
             }
         }
@@ -537,17 +551,8 @@ module DiscordBot {
             try {
                 let headers: any = {
                     "headers": {
-                        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                        "accept-language": "en-US,en;q=0.9",
+                        "accept": "application/json",
                         "content-type": "application/json; charset=UTF-8",
-                        "sec-ch-ua": "\"Chromium\";v=\"146\", \"Not-A.Brand\";v=\"24\", \"Google Chrome\";v=\"146\"",
-                        "sec-ch-ua-mobile": "?0",
-                        "sec-ch-ua-platform": "\"macOS\"",
-                        "sec-fetch-dest": "document",
-                        "sec-fetch-mode": "navigate",
-                        "sec-fetch-site": "same-origin",
-                        "sec-fetch-user": "?1",
-                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                         "Authorization": auth_header == "" ? null : auth_header
                     },
                     "method": method
